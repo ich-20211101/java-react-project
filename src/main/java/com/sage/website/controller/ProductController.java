@@ -1,6 +1,7 @@
 package com.sage.website.controller;
 
 import com.sage.website.entity.Product;
+import com.sage.website.exception.ProductNotFoundException;
 import com.sage.website.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -28,9 +29,15 @@ public class ProductController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Product> getProductById(@PathVariable Long id) {
-        Optional<Product> product = productService.getProductById(id);
-        return product.map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        Product product = productService.getProductById(id)
+                .orElseThrow(() -> new ProductNotFoundException(id));
+        return ResponseEntity.ok(product);
+    }
+
+    @PostMapping
+    public ResponseEntity<Product> createProduct(@RequestBody Product product) {
+        Product savedProduct = productService.createProduct(product);
+        return ResponseEntity.status(201).body(savedProduct);
     }
 
 }
