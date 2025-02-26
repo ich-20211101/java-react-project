@@ -1,51 +1,54 @@
 package com.sage.website.controller;
 
 import com.sage.website.entity.User;
-import com.sage.website.repository.UserRepository;
+import com.sage.website.exception.UserNotFoundException;
+import com.sage.website.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserService userService;
 
-    @GetMapping
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    @Autowired
+    public UserController(UserService userService) {
+        this.userService = userService;
     }
 
-    @PostMapping
-    public User createUser(@RequestBody User user) {
-        return userRepository.save(user);
+    @GetMapping
+    public ResponseEntity<List<User>> getAllUsers() {
+        List<User> users = userService.getAllUsers();
+        return ResponseEntity.ok(users);
     }
 
     @GetMapping("/{id}")
-    public User getUserById(@PathVariable Long id) {
-        return userRepository.findById(id) .orElse(null);
+    public ResponseEntity<User> getUserById(@PathVariable Long id) {
+        User user = userService.getUserById(id)
+                .orElseThrow(() -> new UserNotFoundException(id));
+        return ResponseEntity.ok(user);
     }
 
-    @PutMapping("/{id}")
-    public User updateUser(@PathVariable Long id, @RequestBody User userDetails) {
-        User user = userRepository.findById(id).orElse(null);
+    @PostMapping("/register")
+    public ResponseEntity<Map<String, String>> registerUser(@RequestBody User user) {
+        User savedUser = userService.registerUser(user);
+        return ResponseEntity.status(201).body(Map.of("message", "User registered successfully!"));
+    }
 
-        if (user != null) {
-            user.setName(userDetails.getName());
-            user.setEmail(userDetails.getEmail());
+    @PostMapping("/login")
+    public ResponseEntity<Map<String, String>> loginUser(@RequestBody User loginRequest) {
+        boolean isAuthenticated = userService.authenticateUser(loginRequest.getEmail(), loginRequest.getPassword());
 
-            return userRepository.save(user);
+        if (isAuthenticated) {
+            return ResponseEntity.ok(Map.of("message", "Login successful!"));
+        } else {
+            return ResponseEntity.status(401).body(Map.of("message", "Invalid email or password."));
         }
-
-        return null;
-    }
-
-    @DeleteMapping("/{id}")
-    public void deleteUser(@PathVariable Long id) {
-        userRepository.deleteById(id);
     }
 
 }
